@@ -11,16 +11,18 @@
         </arguments>
     </type>
 
+    <type name="Magento\Quote\Api\PaymentMethodManagementInterface">
+        <plugin name="bold" type="Bold\CheckoutPaymentBooster\Plugin\Quote\Api\PaymentMethodManagementInterface\IsSpiAvailablePlugin"/>
+        <plugin name="bold_fastlane" type="Bold\CheckoutPaymentBooster\Plugin\Quote\Api\PaymentMethodManagementInterface\IsFastlaneAvailablePlugin"/>
+        <plugin name="bold_wallet" type="Bold\CheckoutPaymentBooster\Plugin\Quote\Api\PaymentMethodManagementInterface\IsWalletPayAvailablePlugin"/>
+    </type>
+
     <type name="Magento\Customer\CustomerData\SectionPoolInterface">
         <arguments>
             <argument name="sectionSourceMap" xsi:type="array">
                 <item name="bold-checkout-data" xsi:type="string">Bold\CheckoutPaymentBooster\CustomerData\BoldCheckoutData</item>
             </argument>
         </arguments>
-    </type>
-
-    <type name="Magento\Framework\App\FrontController">
-        <plugin name="boldCheckoutDataPlugin" type="Bold\CheckoutPaymentBooster\Plugin\Framework\App\FrontControllerPlugin" sortOrder="-1"/>
     </type>
 
     <type name="Magento\Quote\Api\CartRepositoryInterface">

@@ -1,0 +1,87 @@
+<?php
+
+declare(strict_types=1);
+
+use Bold\CheckoutPaymentBooster\Block\Hyva\Checkout\Payment\Methods\Spi;
+use Magento\Framework\Escaper;
+
+/** Bold Checkout SPI template for Hyva theme. */
+/** @var Spi $block */
+/** @var Escaper $escaper */
+?>
+<div id="SPI"></div>
+
+<!-- Load and initialize payments_sdk -->
+<script type='module'>
+    const storeBoldConfiguration = () => {
+        console.log('storeBoldConfiguration');
+        Alpine.store('bold', <?= /* @noEscape */ $block->getBoldConfigJson() ?>);
+    };
+    const loadPaymentsSDK = async () => {
+        if (window.boldPaymentsInstance) {
+            return;
+        }
+        const {initializeBoldPayments} = await import('<?php
+            echo $escaper->escapeJs(
+                $block->getViewFileUrl('Bold_CheckoutPaymentBooster::hyva/js/payment-sdk-initializer.js')
+            )
+            ?>');
+        const {
+            onRequireOrderDataCallback,
+            onCreatePaymentOrderCallback,
+            onUpdatePaymentOrderCallback,
+            onApprovePaymentOrderCallback,
+            onScaPaymentOrderCallback,
+            onClickPaymentOrderCallback
+        } = await import('<?php
+            echo $escaper->escapeJs(
+                $block->getViewFileUrl('Bold_CheckoutPaymentBooster::hyva/js/payment-sdk-callbacks.js')
+            )
+            ?>');
+        console.log('initializeBoldPayments');
+        await initializeBoldPayments(
+            onRequireOrderDataCallback,
+            onCreatePaymentOrderCallback,
+            onUpdatePaymentOrderCallback,
+            onApprovePaymentOrderCallback,
+            onScaPaymentOrderCallback,
+            onClickPaymentOrderCallback
+        );
+    };
+    const renderPayments = async () => {
+        if (!window.boldPaymentsInstance) {
+            return;
+        }
+        console.log('renderPayments');
+        const paymentOptions = Alpine.store('bold').isFastlaneAvailable ? {
+            fastlane: true,
+            shouldRenderSpiFrame: false,
+            shouldRenderPaypalButton: false,
+            shouldRenderAppleGoogleButtons: false,
+            shopName: Alpine.store('bold').shopName,
+            allowedCountries: Alpine.store('bold').countries,
+        } : {
+            fastlane: false,
+            shouldRenderSpiFrame: true,
+            shouldRenderPaypalButton: false,
+            shouldRenderAppleGoogleButtons: false,
+            allowedCountries: Alpine.store('bold').countries,
+        };
+
+        await window.boldPaymentsInstance.renderPayments('SPI', paymentOptions);
+    };
+    const init = async () => {
+        if (typeof Alpine !== 'undefined') {
+            await storeBoldConfiguration();
+            await loadPaymentsSDK();
+            await renderPayments();
+            return;
+        }
+        document.addEventListener('alpine:init', async () => {
+            await storeBoldConfiguration();
+            await loadPaymentsSDK();
+            await renderPayments();
+        });
+    };
+    init();
+</script>

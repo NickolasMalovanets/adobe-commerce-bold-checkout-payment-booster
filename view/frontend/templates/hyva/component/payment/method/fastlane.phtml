@@ -1,0 +1,46 @@
+<?php
+
+declare(strict_types=1);
+
+use Bold\CheckoutPaymentBooster\Block\Hyva\Checkout\Payment\Methods\Spi;
+use Magento\Framework\Escaper;
+
+/** Bold Checkout SPI template for Hyva theme. */
+/** @var Spi $block */
+/** @var Escaper $escaper */
+?>
+<div id="bold_fastlane"></div>
+
+<!-- Load and initialize payments_sdk -->
+<script type='module'>
+    const storeBoldConfiguration = () => {
+        console.log('storeFastlaneBoldConfiguration');
+        Alpine.store('bold', <?= /* @noEscape */ $block->getBoldConfigJson() ?>);
+    };
+    const loadFastlaneSDK = async () => {
+        if (window.boldFastlaneInstance) {
+            return;
+        }
+        console.log('loadFastlaneSDK');
+    };
+    const renderFastlane = async () => {
+        if (!window.boldFastlaneInstance) {
+            return;
+        }
+        console.log('renderFastlane');
+    };
+    const init = async () => {
+        if (typeof Alpine !== 'undefined') {
+            await storeBoldConfiguration();
+            await loadFastlaneSDK();
+            await renderFastlane();
+            return;
+        }
+        document.addEventListener('alpine:init', async () => {
+            await storeBoldConfiguration();
+            await loadFastlaneSDK();
+            await renderFastlane();
+        });
+    };
+    init();
+</script>

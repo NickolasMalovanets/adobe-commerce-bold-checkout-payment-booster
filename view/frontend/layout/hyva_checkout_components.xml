@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <referenceBlock name="checkout.payment.methods">
+            <block name="checkout.payment.method.bold.spi"
+                   class="Bold\CheckoutPaymentBooster\Block\Hyva\Checkout\Payment\Methods\Spi"
+                   as="bold"
+                   template="Bold_CheckoutPaymentBooster::hyva/component/payment/method/spi.phtml"/>
+            <block name="checkout.payment.method.bold.wallet"
+                   class="Bold\CheckoutPaymentBooster\Block\Hyva\Checkout\Payment\Methods\Wallet"
+                   as="bold_wallet"
+                   template="Bold_CheckoutPaymentBooster::hyva/component/payment/method/wallet.phtml"/>
+            <block name="checkout.payment.method.bold.fastlane"
+                   class="Bold\CheckoutPaymentBooster\Block\Hyva\Checkout\Payment\Methods\Fastlane"
+                   as="bold_fastlane"
+                   template="Bold_CheckoutPaymentBooster::hyva/component/payment/method/fastlane.phtml"/>
+        </referenceBlock>
+    </body>
+</page>

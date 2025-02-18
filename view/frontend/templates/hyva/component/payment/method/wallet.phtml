@@ -1,0 +1,79 @@
+<?php
+
+declare(strict_types=1);
+
+use Bold\CheckoutPaymentBooster\Block\Hyva\Checkout\Payment\Methods\Wallet;
+use Magento\Framework\Escaper;
+
+/** Bold Checkout SPI template for Hyva theme. */
+/** @var Wallet $block */
+/** @var Escaper $escaper */
+?>
+<div id="wallet-payments"></div>
+
+<!-- Load and initialize payments_sdk -->
+<script type='module'>
+    const storeBoldConfiguration = () => {
+        console.log('storeWalletBoldConfiguration');
+        Alpine.store('bold', <?= /* @noEscape */ $block->getBoldConfigJson() ?>);
+    };
+    const loadPaymentsSDK = async () => {
+        if (window.boldPaymentsInstance) {
+            return;
+        }
+        const {initializeBoldPayments} = await import('<?php
+            echo $escaper->escapeJs(
+                $block->getViewFileUrl('Bold_CheckoutPaymentBooster::hyva/js/payment-sdk-initializer.js')
+            )
+            ?>');
+        const {
+            onRequireOrderDataCallback,
+            onCreatePaymentOrderCallback,
+            onUpdatePaymentOrderCallback,
+            onApprovePaymentOrderCallback,
+            onScaPaymentOrderCallback,
+            onClickPaymentOrderCallback
+        } = await import('<?php
+            echo $escaper->escapeJs(
+                $block->getViewFileUrl('Bold_CheckoutPaymentBooster::hyva/js/payment-sdk-callbacks.js')
+            )
+            ?>');
+        console.log('initializeWalletBoldPayments');
+        await initializeBoldPayments(
+            onRequireOrderDataCallback,
+            onCreatePaymentOrderCallback,
+            onUpdatePaymentOrderCallback,
+            onApprovePaymentOrderCallback,
+            onScaPaymentOrderCallback,
+            onClickPaymentOrderCallback
+        );
+    };
+    const renderWalletPayments = async () => {
+        if (!window.boldPaymentsInstance) {
+            return;
+        }
+        console.log('renderWalletPayments');
+        const walletOptions = {
+            fastlane: false,
+            pageSource: 'checkout',
+            updateShipping: false,
+            shopName: Alpine.store('bold').shopName,
+            isPhoneRequired: Alpine.store('bold').isPhoneRequired,
+        };
+        await window.boldPaymentsInstance.renderWalletPayments('wallet-payments', walletOptions);
+    };
+    const init = async () => {
+        if (typeof Alpine !== 'undefined') {
+            await storeBoldConfiguration();
+            await loadPaymentsSDK();
+            await renderWalletPayments();
+            return;
+        }
+        document.addEventListener('alpine:init', async () => {
+            await storeBoldConfiguration();
+            await loadPaymentsSDK();
+            await renderWalletPayments();
+        });
+    };
+    init();
+</script>

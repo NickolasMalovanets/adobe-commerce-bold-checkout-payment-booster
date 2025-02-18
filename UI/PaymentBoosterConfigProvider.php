@@ -86,6 +86,11 @@ class PaymentBoosterConfigProvider implements ConfigProviderInterface
      * @param Config $config
      * @param AllowedCountries $allowedCountries
      * @param CollectionFactory $collectionFactory
+     * @param LoggerInterface $logger
+     * @param StoreManagerInterface $storeManager
+     * @param UrlInterface $urlBuilder
+     * @param ScopeConfigInterface $scopeConfig
+     * @param Escaper $escaper
      */
     public function __construct(
         CheckoutData $checkoutData,
@@ -163,7 +168,6 @@ class PaymentBoosterConfigProvider implements ConfigProviderInterface
             'bold' => [
                 'epsAuthToken' => $epsAuthToken,
                 'configurationGroupLabel' => $configurationGroupLabel,
-                'epsUrl' => $this->config->getEpsUrl($websiteId),
                 'epsStaticUrl' => $this->config->getStaticEpsUrl($websiteId),
                 'gatewayId' => $epsGatewayId,
                 'jwtToken' => $jwtToken,
@@ -236,12 +240,12 @@ class PaymentBoosterConfigProvider implements ConfigProviderInterface
         return $this->countries;
     }
 
-    private function getDefaultSuccessPageUrl()
+    private function getDefaultSuccessPageUrl(): string
     {
         return $this->urlBuilder->getUrl('checkout/onepage/success/');
     }
 
-    private function getShippingPolicy()
+    private function getShippingPolicy(): array
     {
         $policyContent = $this->scopeConfig->getValue(
             'shipping/shipping_policy/shipping_policy_content',
