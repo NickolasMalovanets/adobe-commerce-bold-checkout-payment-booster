@@ -2,20 +2,23 @@
 
 declare(strict_types=1);
 
-use Bold\CheckoutPaymentBooster\Block\Hyva\Checkout\Payment\Methods\Wallet;
+use Bold\CheckoutPaymentBooster\ViewModel\Hyva\Bold;
 use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
 
 /** Bold Checkout SPI template for Hyva theme. */
-/** @var Wallet $block */
+/** @var Template $block */
 /** @var Escaper $escaper */
+/** @var Bold $viewModel */
+$viewModel = $block->getViewModel();
 ?>
-<div id="wallet-payments"></div>
+<div id="wallet-payments" wire:ignore></div>
 
 <!-- Load and initialize payments_sdk -->
 <script type='module'>
     const storeBoldConfiguration = () => {
         console.log('storeWalletBoldConfiguration');
-        Alpine.store('bold', <?= /* @noEscape */ $block->getBoldConfigJson() ?>);
+        Alpine.store('bold', <?= /* @noEscape */ $viewModel->getBoldConfigJson() ?>);
     };
     const loadPaymentsSDK = async () => {
         if (window.boldPaymentsInstance) {

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Bold\CheckoutPaymentBooster\Block\Hyva\Checkout\Payment\Methods;
+namespace Bold\CheckoutPaymentBooster\ViewModel\Hyva;
 
 use Bold\CheckoutPaymentBooster\Model\CheckoutData;
 use Bold\CheckoutPaymentBooster\Model\Config;
@@ -13,8 +13,7 @@ use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\Escaper;
 use Magento\Framework\Serialize\Serializer\Json;
 use Magento\Framework\UrlInterface;
-use Magento\Framework\View\Element\Template;
-use Magento\Framework\View\Element\Template\Context;
+use Magento\Framework\View\Element\Block\ArgumentInterface;
 use Magento\Quote\Api\Data\CartInterface;
 use Magento\Quote\Model\Quote\Address\Rate;
 use Magento\Quote\Model\QuoteIdMaskFactory;
@@ -22,7 +21,7 @@ use Magento\Store\Model\ScopeInterface;
 use Magento\Store\Model\StoreManagerInterface;
 use Psr\Log\LoggerInterface;
 
-class Spi extends Template
+class Bold implements ArgumentInterface
 {
     /**
      * @var CheckoutData
@@ -85,7 +84,6 @@ class Spi extends Template
     protected $quoteIdMaskFactory;
 
     /**
-     * @param Context $context
      * @param CheckoutData $checkoutData
      * @param Config $config
      * @param AllowedCountries $allowedCountries
@@ -95,11 +93,10 @@ class Spi extends Template
      * @param UrlInterface $urlBuilder
      * @param ScopeConfigInterface $scopeConfig
      * @param Escaper $escaper
+     * @param QuoteIdMaskFactory $quoteIdMaskFactory
      * @param Json $json
-     * @param array $data
      */
     public function __construct(
-        Context $context,
         CheckoutData $checkoutData,
         Config $config,
         AllowedCountries $allowedCountries,
@@ -110,10 +107,8 @@ class Spi extends Template
         ScopeConfigInterface $scopeConfig,
         Escaper $escaper,
         QuoteIdMaskFactory $quoteIdMaskFactory,
-        Json $json,
-        array $data = []
+        Json $json
     ) {
-        parent::__construct($context, $data);
         $this->checkoutData = $checkoutData;
         $this->config = $config;
         $this->allowedCountries = $allowedCountries;

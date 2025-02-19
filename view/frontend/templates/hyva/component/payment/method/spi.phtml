@@ -2,25 +2,34 @@
 
 declare(strict_types=1);
 
-use Bold\CheckoutPaymentBooster\Block\Hyva\Checkout\Payment\Methods\Spi;
+use Bold\CheckoutPaymentBooster\ViewModel\Hyva\Bold;
 use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
 
 /** Bold Checkout SPI template for Hyva theme. */
-/** @var Spi $block */
+/** @var Template $block */
 /** @var Escaper $escaper */
+/** @var Bold $viewModel */
+$viewModel = $block->getViewModel();
 ?>
-<div id="SPI"></div>
+<div id="SPI" wire:ignore></div>
 
 <!-- Load and initialize payments_sdk -->
 <script type='module'>
     const storeBoldConfiguration = () => {
         console.log('storeBoldConfiguration');
-        Alpine.store('bold', <?= /* @noEscape */ $block->getBoldConfigJson() ?>);
+        Alpine.store('bold', <?= /* @noEscape */ $viewModel->getBoldConfigJson() ?>);
     };
     const loadPaymentsSDK = async () => {
         if (window.boldPaymentsInstance) {
             return;
         }
+        const {subscribeToSpiEvents} = await import('<?php
+            echo $escaper->escapeJs(
+                $block->getViewFileUrl('Bold_CheckoutPaymentBooster::hyva/js/payment-sdk-event-listener.js')
+            )
+            ?>');
+        subscribeToSpiEvents();
         const {initializeBoldPayments} = await import('<?php
             echo $escaper->escapeJs(
                 $block->getViewFileUrl('Bold_CheckoutPaymentBooster::hyva/js/payment-sdk-initializer.js')
@@ -48,6 +57,59 @@ use Magento\Framework\Escaper;
             onClickPaymentOrderCallback
         );
     };
+    const tokenizeBeforeSubmitOrder = async () => {
+        let tokenized;
+        const getIsTokenized = async () => {
+            return new Promise((resolve) => {
+                const interval = setInterval(() => {
+                    if (tokenized !== undefined) {
+                        clearInterval(interval);
+                        console.log('getIsTokenized', tokenized);
+                        resolve(tokenized);
+                    }
+                }, 100);
+            });
+        };
+        window.addEventListener('message', async ({data}) => {
+            const eventType = data?.eventType;
+            if (!eventType) {
+                return;
+            }
+            if (eventType === 'EVENT_SPI_TOKENIZED') {
+                console.log('EVENT_SPI_TOKENIZED', data);
+                if (data.payload?.success === false) {
+                    tokenized = false;
+                    return;
+                }
+                tokenized = true;
+            }
+            if (eventType === 'EVENT_SPI_TOKENIZE_FAILED') {
+                console.log('EVENT_SPI_TOKENIZE_FAILED', data);
+                tokenized = false;
+            }
+        });
+        const iframeWindow = document.getElementById('spi_frame_SPI')?.contentWindow;
+        if (!iframeWindow) {
+            hyvaCheckout.message.warn(
+                'Payment failed. Please try again or select a different payment method.'
+            );
+            return false;
+        }
+        const cart = Alpine.store('bold').cart;
+        const payload = {
+            customer: {
+                first_name: cart.customer.firstname,
+                last_name: cart.customer.lastname,
+                email: cart.customer.email_address,
+            },
+            billing_address: Alpine.raw(cart.billing_address),
+            shipping_address: Alpine.raw(cart.shipping_address),
+            totals: Alpine.raw(cart.totals),
+        };
+        console.log('ACTION_SPI_TOKENIZE', payload);
+        iframeWindow.postMessage({actionType: 'ACTION_SPI_TOKENIZE', payload: payload}, '*');
+        return await getIsTokenized();
+    };
     const renderPayments = async () => {
         if (!window.boldPaymentsInstance) {
             return;
@@ -69,6 +131,7 @@ use Magento\Framework\Escaper;
         };
 
         await window.boldPaymentsInstance.renderPayments('SPI', paymentOptions);
+        hyvaCheckout.validation.register('SPI', tokenizeBeforeSubmitOrder);
     };
     const init = async () => {
         if (typeof Alpine !== 'undefined') {

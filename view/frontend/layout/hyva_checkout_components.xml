@@ -4,17 +4,27 @@
     <body>
         <referenceBlock name="checkout.payment.methods">
             <block name="checkout.payment.method.bold.spi"
-                   class="Bold\CheckoutPaymentBooster\Block\Hyva\Checkout\Payment\Methods\Spi"
                    as="bold"
-                   template="Bold_CheckoutPaymentBooster::hyva/component/payment/method/spi.phtml"/>
+                   template="Bold_CheckoutPaymentBooster::hyva/component/payment/method/spi.phtml">
+                <arguments>
+                    <argument name="view_model" xsi:type="object">Bold\CheckoutPaymentBooster\ViewModel\Hyva\Bold</argument>
+                </arguments>
+            </block>
+
             <block name="checkout.payment.method.bold.wallet"
-                   class="Bold\CheckoutPaymentBooster\Block\Hyva\Checkout\Payment\Methods\Wallet"
                    as="bold_wallet"
-                   template="Bold_CheckoutPaymentBooster::hyva/component/payment/method/wallet.phtml"/>
+                   template="Bold_CheckoutPaymentBooster::hyva/component/payment/method/wallet.phtml">
+                <arguments>
+                    <argument name="view_model" xsi:type="object">Bold\CheckoutPaymentBooster\ViewModel\Hyva\Bold</argument>
+                </arguments>
+            </block>
             <block name="checkout.payment.method.bold.fastlane"
-                   class="Bold\CheckoutPaymentBooster\Block\Hyva\Checkout\Payment\Methods\Fastlane"
                    as="bold_fastlane"
-                   template="Bold_CheckoutPaymentBooster::hyva/component/payment/method/fastlane.phtml"/>
+                   template="Bold_CheckoutPaymentBooster::hyva/component/payment/method/fastlane.phtml">
+                <arguments>
+                    <argument name="view_model" xsi:type="object">Bold\CheckoutPaymentBooster\ViewModel\Hyva\Bold</argument>
+                </arguments>
+            </block>
         </referenceBlock>
     </body>
 </page>
