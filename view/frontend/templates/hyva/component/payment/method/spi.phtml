@@ -30,11 +30,6 @@ $viewModel = $block->getViewModel();
             )
             ?>');
         subscribeToSpiEvents();
-        const {initializeBoldPayments} = await import('<?php
-            echo $escaper->escapeJs(
-                $block->getViewFileUrl('Bold_CheckoutPaymentBooster::hyva/js/payment-sdk-initializer.js')
-            )
-            ?>');
         const {
             onRequireOrderDataCallback,
             onCreatePaymentOrderCallback,
@@ -48,6 +43,11 @@ $viewModel = $block->getViewModel();
             )
             ?>');
         console.log('initializeBoldPayments');
+        const {initializeBoldPayments} = await import('<?php
+            echo $escaper->escapeJs(
+                $block->getViewFileUrl('Bold_CheckoutPaymentBooster::hyva/js/payment-sdk-initializer.js')
+            )
+            ?>');
         await initializeBoldPayments(
             onRequireOrderDataCallback,
             onCreatePaymentOrderCallback,
@@ -58,36 +58,6 @@ $viewModel = $block->getViewModel();
         );
     };
     const tokenizeBeforeSubmitOrder = async () => {
-        let tokenized;
-        const getIsTokenized = async () => {
-            return new Promise((resolve) => {
-                const interval = setInterval(() => {
-                    if (tokenized !== undefined) {
-                        clearInterval(interval);
-                        console.log('getIsTokenized', tokenized);
-                        resolve(tokenized);
-                    }
-                }, 100);
-            });
-        };
-        window.addEventListener('message', async ({data}) => {
-            const eventType = data?.eventType;
-            if (!eventType) {
-                return;
-            }
-            if (eventType === 'EVENT_SPI_TOKENIZED') {
-                console.log('EVENT_SPI_TOKENIZED', data);
-                if (data.payload?.success === false) {
-                    tokenized = false;
-                    return;
-                }
-                tokenized = true;
-            }
-            if (eventType === 'EVENT_SPI_TOKENIZE_FAILED') {
-                console.log('EVENT_SPI_TOKENIZE_FAILED', data);
-                tokenized = false;
-            }
-        });
         const iframeWindow = document.getElementById('spi_frame_SPI')?.contentWindow;
         if (!iframeWindow) {
             hyvaCheckout.message.warn(
@@ -95,18 +65,40 @@ $viewModel = $block->getViewModel();
             );
             return false;
         }
-        const cart = Alpine.store('bold').cart;
+        Magewire.plugins.loader.start();
+        let tokenized;
+        const getIsTokenized = async () => {
+            return new Promise((resolve) => {
+                const interval = setInterval(() => {
+                    if (tokenized !== undefined) {
+                        clearInterval(interval);
+                        console.log('getIsTokenized', tokenized);
+                        Magewire.plugins.loader.stop();
+                        resolve(tokenized);
+                    }
+                }, 100);
+            });
+        };
+        window.addEventListener('message', async ({data}) => {
+            const eventType = data?.eventType;
+            if (eventType === 'EVENT_SPI_TOKENIZED') {
+                tokenized = data.payload?.success !== false;
+            }
+            if (eventType === 'EVENT_SPI_TOKENIZE_FAILED') {
+                tokenized = false;
+            }
+        });
+        const cart = Alpine.raw(Alpine.store('bold').cart);
         const payload = {
             customer: {
                 first_name: cart.customer.firstname,
                 last_name: cart.customer.lastname,
                 email: cart.customer.email_address,
             },
-            billing_address: Alpine.raw(cart.billing_address),
-            shipping_address: Alpine.raw(cart.shipping_address),
-            totals: Alpine.raw(cart.totals),
+            billing_address: cart.billing_address,
+            shipping_address: cart.shipping_address,
+            totals: cart.totals,
         };
-        console.log('ACTION_SPI_TOKENIZE', payload);
         iframeWindow.postMessage({actionType: 'ACTION_SPI_TOKENIZE', payload: payload}, '*');
         return await getIsTokenized();
     };
