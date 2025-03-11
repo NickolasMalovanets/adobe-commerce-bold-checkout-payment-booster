@@ -7,6 +7,8 @@ namespace Bold\CheckoutPaymentBooster\Service\ExpressPay;
 use Bold\CheckoutPaymentBooster\Model\Config;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Quote\Api\Data\CartItemInterface;
+use Magento\Quote\Model\Cart\ShippingMethod;
+use Magento\Quote\Model\Cart\ShippingMethodConverter;
 use Magento\Quote\Model\Quote;
 use Magento\Quote\Model\Quote\Address\Rate;
 use Magento\Quote\Model\Quote\Address\Total;
@@ -38,7 +40,6 @@ class QuoteConverter
      */
     private $scopeConfig;
 
-
     /**
      * @var Config
      */
@@ -49,10 +50,24 @@ class QuoteConverter
      */
     private $areTotalsCollected = false;
 
-    public function __construct(ScopeConfigInterface $scopeConfig, Config $config)
-    {
+    /**
+     * @var ShippingMethodConverter
+     */
+    private $shippingMethodConverter;
+
+    /**
+     * @param ScopeConfigInterface $scopeConfig
+     * @param Config $config
+     * @param ShippingMethodConverter $shippingMethodConverter
+     */
+    public function __construct(
+        ScopeConfigInterface $scopeConfig,
+        Config $config,
+        ShippingMethodConverter $shippingMethodConverter
+    ) {
         $this->scopeConfig = $scopeConfig;
         $this->config = $config;
+        $this->shippingMethodConverter = $shippingMethodConverter;
     }
 
     /**
@@ -174,24 +189,40 @@ class QuoteConverter
             }
         ));
         $hasRequiredAddressData = ($shippingAddress->getCity() && $shippingAddress->getCountryId());
+        $websiteId = $quote->getStore()->getWebsiteId();
+        $taxDisplayedInShipping = $this->config->isTaxDisplayedInShipping((int)$websiteId);
 
-        if ($hasRequiredAddressData && count($shippingRates) > 0) {
-            $convertedQuote['order_data']['shipping_options'] = array_map(
-                static function (Rate $rate) use ($currencyCode, $shippingAddress): array {
-                    $price = ($rate->getCode() === $shippingAddress->getShippingMethod())
-                        ? $shippingAddress->getShippingAmount() : $rate->getPrice();
-                    return [
-                        'id' => $rate->getCode(),
-                        'label' => trim("{$rate->getCarrierTitle()} - {$rate->getMethodTitle()}", ' -'),
+        if ($hasRequiredAddressData) {
+            $convertedQuote['order_data']['shipping_options'] = [];
+            foreach ($shippingRates as $shippingRate) {
+                /** @var ShippingMethod $rate */
+                $rate = $this->shippingMethodConverter->modelToDataObject($shippingRate, $currencyCode);
+                $price = $taxDisplayedInShipping ? $rate->getPriceInclTax() : $rate->getPriceExclTax();
+                $shippingMethodCode = $rate->getCarrierCode() . '_' . $rate->getMethodCode();
+                $convertedQuote['order_data']['shipping_options'][] = [
+                    'id' => $shippingMethodCode,
+                    'label' => trim("{$rate->getCarrierTitle()} - {$rate->getMethodTitle()}", ' -'),
+                    'type' => 'SHIPPING',
+                    'amount' => [
+                        'currency_code' => $currencyCode ?? '',
+                        'value' => number_format((float)$price, 2, '.', ''),
+                    ],
+                ];
+                if ($shippingAddress->getShippingMethod() === $shippingMethodCode) {
+                    $shippingAmount = $taxDisplayedInShipping
+                        ? $shippingAddress->getShippingAmount() + $shippingAddress->getShippingTaxAmount()
+                        : $shippingAddress->getShippingAmount();
+                    $convertedQuote['order_data']['selected_shipping_option'] = [
+                        'id' => $shippingAddress->getShippingMethod(),
+                        'label' => $shippingAddress->getShippingDescription() ?? $shippingAddress->getShippingMethod(),
                         'type' => 'SHIPPING',
                         'amount' => [
                             'currency_code' => $currencyCode ?? '',
-                            'value' => number_format((float)$price, 2, '.', ''),
+                            'value' => number_format((float)$shippingAmount, 2, '.', ''),
                         ],
                     ];
-                },
-                $shippingRates
-            );
+                }
+            }
         }
 
         if ($includeAddress && $hasRequiredAddressData) {
@@ -210,18 +241,6 @@ class QuoteConverter
         if ($shippingAddress->getTelephone()) {
             $convertedQuote['order_data']['shipping_address']['phone_number'] = $shippingAddress->getTelephone();
         }
-        if ($hasRequiredAddressData && $shippingAddress->hasShippingMethod() && $shippingAddress->getShippingMethod() !== '') { // @phpstan-ignore method.notFound
-            $convertedQuote['order_data']['selected_shipping_option'] = [
-                'id' => $shippingAddress->getShippingMethod(),
-                'label' => $shippingAddress->getShippingDescription() ?? $shippingAddress->getShippingMethod(),
-                'type' => 'SHIPPING',
-                'amount' => [
-                    'currency_code' => $currencyCode ?? '',
-                    'value' => number_format((float)$shippingAddress->getShippingAmount(), 2, '.', ''),
-                ],
-            ];
-        }
-
         $convertedQuote['order_data'] = array_filter($convertedQuote['order_data']);
 
         return $convertedQuote;
@@ -253,7 +272,7 @@ class QuoteConverter
                             'sku' => $cartItem->getSku() ?? '',
                             'unit_amount' => [
                                 'currency_code' => $currencyCode ?? '',
-                                'value' =>  number_format(
+                                'value' => number_format(
                                     $itemPrice / $cartItem->getQty(),
                                     2,
                                     '.',
@@ -361,8 +380,13 @@ class QuoteConverter
                 ''
             );
         } else {
+            $websiteId = (int)$quote->getStore()->getWebsiteId();
+            $isTaxDisplayedInShipping = $this->config->isTaxDisplayedInShipping($websiteId);
+            $taxAmount = $isTaxDisplayedInShipping
+                ? $quote->getShippingAddress()->getTaxAmount() - $quote->getShippingAddress()->getShippingTaxAmount()
+                : $quote->getShippingAddress()->getTaxAmount();
             $convertedQuote['order_data']['tax_total']['value'] = number_format(
-                (float)($quote->getShippingAddress()->getTaxAmount() ?? 0.00),
+                (float)($taxAmount ?? 0.00),
                 2,
                 '.',
                 ''

@@ -8,6 +8,7 @@ use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\Config\Storage\WriterInterface;
 use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Store\Model\ScopeInterface;
+use Magento\Tax\Model\Config as TaxConfig;
 
 /**
  * Module config.
@@ -321,8 +322,8 @@ class Config
             ScopeInterface::SCOPE_WEBSITES,
             $websiteId
         );
-    }    
-    
+    }
+
     /**
      * Check if Wallet Express Pay buttons are enabled On the cart and mini cart pages.
      *
@@ -337,7 +338,7 @@ class Config
             $websiteId
         );
     }
-    
+
     /**
      * Check if Wallet Express Pay buttons are enabled on the product pages.
      *
@@ -347,7 +348,7 @@ class Config
     public function isProductWalletPayEnabled(int $websiteId): bool
     {
         return false;
-        
+
         // $this->scopeConfig->isSetFlag(
         // self::PATH_IS_PRODUCT_WALLET_PAY_ENABLED,
         // ScopeInterface::SCOPE_WEBSITES,
@@ -383,5 +384,14 @@ class Config
             ScopeInterface::SCOPE_WEBSITES,
             $websiteId
         );
+    }
+
+    public function isTaxDisplayedInShipping(int $websiteId): bool
+    {
+        return TaxConfig::DISPLAY_TYPE_INCLUDING_TAX === (int)$this->scopeConfig->getValue(
+                TaxConfig::CONFIG_XML_PATH_DISPLAY_SHIPPING,
+                ScopeInterface::SCOPE_WEBSITES,
+                $websiteId
+            );
     }
 }
